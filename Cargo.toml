@@ -1,0 +1,12 @@
+[workspace]
+resolver = "2"
+members = ["pkg/*", "cmd/*", "xtask"]
+
+[workspace.dependencies]
+clap = { version = "4.5.4", features = ["derive"] }
+monoio = "0.2.3"
+xdpilone = "1.0.3"
+anyhow = "1.0.82"
+etherparse = "0.15"
+
+sender = { path = "./pkg/sender" }
