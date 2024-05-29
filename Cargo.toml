@@ -4,9 +4,15 @@ members = ["pkg/*", "cmd/*", "xtask"]
 
 [workspace.dependencies]
 clap = { version = "4.5.4", features = ["derive"] }
-monoio = "0.2.3"
+tokio = { version = "1", features = ["macros", "rt", "rt-multi-thread", "net", "signal", "time"] }
 xdpilone = "1.0.3"
 anyhow = "1.0.82"
 etherparse = "0.15"
+aya = "0.12"
+aya-log = "0.2"
+env_logger = "0.10"
+libc = "0.2"
+log = "0.4"
+crossbeam = "0.8.4"
 
 sender = { path = "./pkg/sender" }

@@ -1,5 +1,5 @@
 [package]
-name = "client"
+name = "server"
 version = "0.1.0"
 edition = "2021"
 
@@ -14,6 +14,3 @@ aya-log.workspace = true
 env_logger.workspace = true
 libc.workspace = true
 log.workspace = true
-crossbeam.workspace = true
-
-sender.workspace = true
