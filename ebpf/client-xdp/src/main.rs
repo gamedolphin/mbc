@@ -82,7 +82,7 @@ fn client_receiver(ctx: XdpContext) -> Result<u32, ()> {
         }
     }
 
-    Ok(SOCKS.redirect(0, 0).unwrap_or(xdp_action::XDP_ABORTED))
+    return Ok(SOCKS.redirect(0, 0).unwrap_or(xdp_action::XDP_ABORTED));
 }
 
 #[inline(always)]

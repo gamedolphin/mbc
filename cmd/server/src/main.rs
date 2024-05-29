@@ -10,10 +10,13 @@ use clap::Parser;
 use env_logger::Env;
 use log::{debug, info, warn};
 
-#[derive(Debug, Parser)]
+#[derive(clap::Parser)]
 struct Opt {
-    #[clap(short, long)]
+    #[arg(short, long)]
     iface: String,
+
+    #[arg(short, long, default_value = "false")]
+    skb: bool,
 }
 
 #[tokio::main]
@@ -53,7 +56,12 @@ pub async fn main() -> anyhow::Result<()> {
 
     let program: &mut Xdp = bpf.program_mut("server_xdp").unwrap().try_into()?;
     program.load()?;
-    program.attach(&opt.iface, XdpFlags::default())
+    let mode = if opt.skb {
+        XdpFlags::SKB_MODE
+    } else {
+        XdpFlags::default()
+    };
+    program.attach(&opt.iface, mode)
         .context("failed to attach the XDP program with default flags - try changing XdpFlags::default() to XdpFlags::SKB_MODE")?;
 
     info!("Waiting for Ctrl-C...");
@@ -77,10 +85,4 @@ async fn track_packets<T: Borrow<MapData> + BorrowMut<MapData>>(mut stats: Array
             stats.set(0, 0, 0).unwrap();
         }
     }
-}
-
-#[derive(clap::Parser)]
-struct Args {
-    /// The name of the interface to use.
-    ifname: String,
 }

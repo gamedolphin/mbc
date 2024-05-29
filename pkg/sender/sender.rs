@@ -38,8 +38,8 @@ where
     T: std::borrow::BorrowMut<aya::maps::MapData>,
 {
     let umem_config = UmemConfig {
-        fill_size: 1 << 16,
-        complete_size: 1 << 16,
+        fill_size: 1 << 22,
+        complete_size: 1 << 22,
         ..Default::default()
     };
 
@@ -88,11 +88,6 @@ where
     // Get the fill/completion device (which handles the 'device queue').
     let device = umem.fq_cq(&sock).unwrap();
 
-    let rxtx_config = SocketConfig {
-        rx_size: NonZeroU32::new(1 << 4),
-        tx_size: NonZeroU32::new(1 << 8),
-        bind_flags: 0,
-    };
     // let rxtx = umem.rx_tx(&sock, &rxtx_config).unwrap();
 
     // // assert!(rxtx.map_rx().is_ok(), "did not provide a rx_size");
@@ -106,8 +101,18 @@ where
     let mut rx = None;
 
     let mut sock = Some(Socket::with_shared(&info, &umem).unwrap());
-    (0..threads - 1).for_each(|_| {
+    (0..threads).for_each(|_| {
         let sock = sock.take().unwrap_or_else(|| Socket::new(&info).unwrap());
+        let mut rxtx_config = SocketConfig {
+            rx_size: None,
+            tx_size: NonZeroU32::new(1 << 14),
+            bind_flags: SocketConfig::XDP_BIND_SHARED_UMEM,
+        };
+
+        if rx.is_none() {
+            rxtx_config.rx_size = NonZeroU32::new(1 << 14);
+        }
+
         let rxtx = umem.rx_tx(&sock, &rxtx_config).unwrap();
         // Configure our receive/transmit queues.
 
@@ -142,6 +147,8 @@ where
     sock.send_to(&[0_u8; 100], server_addr).unwrap();
 
     info!("waiting for first response");
+
+    device.wake();
 
     while rx.available() == 0 {
         if !cancelled.load(Ordering::Relaxed) {
@@ -232,7 +239,6 @@ where
     let sender = |mut tx: RingTx, data: &[XdpDesc]| {
         let stall_threshold = WAKE_THRESHOLD;
         let data_len = data.len();
-        info!("starting sender for {}", data_len);
         loop {
             if cancelled.load(Ordering::Relaxed) {
                 break;
@@ -251,13 +257,16 @@ where
                 writer.commit();
             }
 
-            if stall_count.load(Ordering::Relaxed) > stall_threshold {
-                // It may be necessary to wake up. This is costly, in relative terms, so we avoid doing
-                // it when the kernel proceeds without us. We detect this by checking if both queues
-                // failed to make progress for some time.
+            while tx.pending() != 0 {
                 tx.wake();
-                stall_count.fetch_sub(stall_threshold, Ordering::Relaxed);
             }
+            // if stall_count.load(Ordering::Relaxed) > stall_threshold {
+            //     // It may be necessary to wake up. This is costly, in relative terms, so we avoid doing
+            //     // it when the kernel proceeds without us. We detect this by checking if both queues
+            //     // failed to make progress for some time.
+            //     tx.wake();
+            //     stall_count.fetch_sub(stall_threshold, Ordering::Relaxed);
+            // }
 
             sent.fetch_add(sent_now, Ordering::Relaxed);
         }

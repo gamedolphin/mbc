@@ -64,7 +64,8 @@ pub fn main() -> anyhow::Result<()> {
 
             let program: &mut Xdp = bpf.program_mut("client_xdp").unwrap().try_into()?;
             program.load()?;
-            program.attach(&opt.iface, XdpFlags::default())
+            let mode = if opt.skb { XdpFlags::SKB_MODE } else { XdpFlags::default()};
+            program.attach(&opt.iface, mode)
                 .context("failed to attach the XDP program with default flags - try changing XdpFlags::default() to XdpFlags::SKB_MODE")?;
 
             info!("loaded client xdp");
@@ -142,4 +143,7 @@ struct Opt {
 
     #[arg(short, long, default_value = "42002")]
     start_port: usize,
+
+    #[arg(short, long, default_value = "false")]
+    skb: bool,
 }
